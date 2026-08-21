@@ -12,6 +12,51 @@ README này là hướng dẫn duy nhất: bước nào gõ lệnh gì, file nà
 > **File lab tổng (kim chỉ nam, có timeline + rubric chấm):** đọc kèm
 > `day21-lab-ai-evaluation-capstone.md` do lớp phát.
 
+## Thông tin cá nhân và nhóm
+
+- **MHV:** 2A202601730
+- **Họ tên:** Nguyễn Minh Quang
+- **GitHub:** [@iamnmquang](https://github.com/iamnmquang)
+- **Tên nhóm:** Mixue
+- **Thành viên:**:
+  - Lê Đăng Tấn - 2A202601916
+  - Nguyễn Quang Sơn - 2A202601956
+  - Phạm Tiến Hưng - 2A202601800
+  - Nguyễn Minh Quang - 2A202601730
+
+**Đóng góp của tôi trong nhóm Mixue:**
+
+- **Hạ tầng & vận hành thật:** dựng môi trường chạy (venv, `.env`), cấp API key thật của mình
+  (OpenAI cho tutor + judge) và cấu hình tracing (LangSmith) — không có bước này thì cả nhóm chỉ
+  có dataset trên giấy, không có kết quả chạy thật để chấm. Xác nhận từng mốc tốn phí/không thể
+  hoàn tác trước khi chạy (20→25 câu tutor thật, các vòng judge `gpt-4o`).
+- **Phát hiện và giải quyết lệch dữ liệu trong nhóm:** nhận ra các thành viên đang mỗi người gửi
+  một bộ dataset khác nhau — trong khi cả pipeline (nhãn người, judge, agreement, verdict) chỉ có
+  nghĩa khi mọi người chấm trên **cùng một dataset**. Chủ động hỏi rõ, lấy bộ `dataset-v1.jsonl`
+  nhóm đã thống nhất, và đưa nó vào chạy thật thay cho bản nháp cá nhân trước đó — quyết định này
+  quyết định toàn bộ số liệu sau đó có dùng được cho báo cáo chung hay không.
+
+## Verdict tóm tắt
+
+**HOLD — chưa ship.** Ba gate quan trọng chưa đạt trên dataset v1 (25 câu, `results-v1.jsonl`):
+
+- **Quote nguyên văn:** 15/25 pass (60%), dưới ngưỡng 100% — 10 câu trích dẫn ghép đoạn
+  không liên tiếp.
+- **Composite release gate** (qua code gate + judge groundedness V2): 12/25 pass (48%).
+- **Adversarial:** 1/3 fail — `sc-20` bị dụ đưa khung prompt/rubric hoàn chỉnh để nộp
+  capstone (vi phạm academic integrity, không trade-off được).
+
+Điểm sáng: schema/citation-tồn tại/follow-up contract đạt 100% (25/25); out-of-scope
+refusal đạt 5/5; judge groundedness sau calibration V2 khớp nhãn vàng 14/15 (93.3%
+agreement, từ 53.3% ở V1).
+
+**Ưu tiên fix theo thứ tự rẻ nhất:** (1) ép quote là substring liên tiếp lấy từ retrieval,
+(2) thêm policy cấm tạo nội dung nộp thay học viên, (3) bắt buộc source trực tiếp cho
+attribution đa tài liệu + mở rộng gold set near-miss semantic rồi chấm lại độc lập.
+
+Chi tiết đầy đủ (rubric, routing, calibration, scorecard theo slice): xem mục 5–7 của
+[deliverables/REPORT.md](deliverables/REPORT.md).
+
 ## Cấu trúc repo
 
 | Thư mục / file | Vai trò |

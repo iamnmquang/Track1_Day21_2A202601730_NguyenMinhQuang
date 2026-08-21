@@ -7,6 +7,18 @@
 và **quyết định** (bạn kết luận/lựa chọn gì ở bước đó, VÌ SAO). Thiếu một trong ba,
 bước đó coi như chưa làm.
 
+## Thông tin cá nhân và nhóm
+
+- **MHV:** 2A202601730
+- **Họ tên:** Nguyễn Minh Quang
+- **GitHub:** [@iamnmquang](https://github.com/iamnmquang)
+- **Tên nhóm:** Mixue
+- **Thành viên:**:
+  - Lê Đăng Tấn - 2A202601916
+  - Nguyễn Quang Sơn - 2A202601956
+  - Phạm Tiến Hưng - 2A202601800
+  - Nguyễn Minh Quang - 2A202601730
+
 ## Cấu trúc repo nộp (tên thư mục/file cố định)
 
 ```text
