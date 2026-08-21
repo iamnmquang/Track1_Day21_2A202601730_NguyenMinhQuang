@@ -95,6 +95,8 @@ class _LangSmith:
 
 def init_tracer():
     """Chọn backend theo biến môi trường. Chưa pip install / init lỗi -> Noop."""
+    if os.environ.get("EVAL_DISABLE_TRACING", "").lower() in {"1", "true", "yes"}:
+        return _Noop()
     if os.environ.get("BRAINTRUST_API_KEY"):
         cls = _Braintrust
     elif os.environ.get("LANGSMITH_API_KEY") or os.environ.get("LANGCHAIN_API_KEY"):

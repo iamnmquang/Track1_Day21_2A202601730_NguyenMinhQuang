@@ -22,7 +22,11 @@ _tracer = tracing.init_tracer()
 JUDGE_MODEL = os.environ.get("EVAL_JUDGE_MODEL", "openai/gpt-4o-mini")
 
 # judge_prompt.md nằm cạnh file này trong eval/ — resolve theo __file__, không theo cwd
-PROMPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "judge_prompt.md")
+PROMPT_PATH = os.environ.get(
+    "JUDGE_PROMPT_PATH",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "judge_prompt.md"),
+)
+VERDICTS_PATH = os.environ.get("JUDGE_VERDICTS_PATH", "verdicts.jsonl")
 
 def read_jsonl(path):
     if not os.path.exists(path):
@@ -32,6 +36,8 @@ def read_jsonl(path):
 
 def read_labels(path="labels.csv"):
     """labels.csv: scenario_id,label,note — chỉ lấy dòng có label."""
+    if not os.path.exists(path) and path == "labels.csv":
+        path = "deliverables/evidence/labels.csv"
     if not os.path.exists(path):
         return {}
     with open(path, encoding="utf-8") as f:
@@ -89,33 +95,42 @@ def main():
     chosen = set(sys.argv[1:])
     rows = [r for r in results if not chosen or r["scenario_id"] in chosen]
     rows = [r for r in rows if "output" in r]  # bỏ row lỗi, không có gì để chấm
+    resume = os.environ.get("JUDGE_RESUME", "").lower() in {"1", "true", "yes"}
+    existing = {}
+    if resume and os.path.exists(VERDICTS_PATH):
+        existing = {v.get("scenario_id"): v for v in read_jsonl(VERDICTS_PATH)
+                    if v.get("scenario_id")}
+        rows = [r for r in rows if r["scenario_id"] not in existing]
     template = open(PROMPT_PATH, encoding="utf-8").read()
     print("Chấm %d row bằng judge %s ..." % (len(rows), JUDGE_MODEL))
 
-    verdicts = []
-    for i, rec in enumerate(rows, 1):
-        print("[%d/%d] %s ... " % (i, len(rows), rec["scenario_id"]), end="", flush=True)
-        try:
-            v = judge_row(rec, template)
-            _tracer.log_run(
-                name="judge-run",
-                inputs={"scenario_id": rec["scenario_id"], "judge_model": JUDGE_MODEL},
-                outputs={"verdict": v["verdict"], "rationale": v.get("rationale", "")},
-                metrics={**{k: x for k, x in v.get("usage", {}).items()
-                            if isinstance(x, (int, float))},
-                         "latency_s": v.get("latency_s", 0)},
-            )
-            print(v["verdict"])
-        except Exception as e:
-            v = {"scenario_id": rec["scenario_id"], "verdict": "uncertain",
-                 "error": str(e)}
-            print("LỖI: %s" % e)
-        verdicts.append(v)
+    verdicts = list(existing.values())
+    write_mode = "a" if resume else "w"
+    with open(VERDICTS_PATH, write_mode, encoding="utf-8") as verdict_file:
+        for i, rec in enumerate(rows, 1):
+            print("[%d/%d] %s ... " % (i, len(rows), rec["scenario_id"]), end="", flush=True)
+            try:
+                v = judge_row(rec, template)
+                _tracer.log_run(
+                    name="judge-run",
+                    inputs={"scenario_id": rec["scenario_id"], "judge_model": JUDGE_MODEL},
+                    outputs={"verdict": v["verdict"], "rationale": v.get("rationale", "")},
+                    metrics={**{k: x for k, x in v.get("usage", {}).items()
+                                if isinstance(x, (int, float)) and not isinstance(x, bool)},
+                             "latency_s": v.get("latency_s", 0)},
+                )
+                print(v["verdict"])
+            except Exception as e:
+                v = {"scenario_id": rec["scenario_id"], "verdict": "uncertain",
+                     "error": str(e)}
+                print("LỖI: %s" % e)
+            verdicts.append(v)
+            verdict_file.write(json.dumps(v, ensure_ascii=False) + "\n")
+            verdict_file.flush()
 
-    with open("verdicts.jsonl", "w", encoding="utf-8") as f:
-        for v in verdicts:
-            f.write(json.dumps(v, ensure_ascii=False) + "\n")
-    print("Ghi %d verdict vào verdicts.jsonl" % len(verdicts))
+    if not rows and existing:
+        print("Không còn row cần chấm (đã resume %d verdict)." % len(existing))
+    print("Ghi %d verdict vào %s" % (len(verdicts), VERDICTS_PATH))
     if _tracer.backend:
         _tracer.flush()
         print("Đã log %d trace judge lên %s." % (len(verdicts), _tracer.backend))

@@ -65,10 +65,41 @@ def check_quote_verbatim(rec, section_tokens):
     return True, None
 
 
+def check_scope_sources_contract(rec):
+    """Scope chỉ được là in/out; in-scope cần nguồn, out-of-scope không được cite."""
+    out = rec.get("output") or {}
+    if out.get("_parse_error"):
+        return None, "bỏ qua (JSON vỡ)"
+    scope = out.get("scope")
+    sources = out.get("sources") or []
+    if scope not in {"in_scope", "out_of_scope"}:
+        return False, f"scope không hợp lệ: {scope!r}"
+    if scope == "in_scope" and not sources:
+        return False, "in_scope nhưng không có source"
+    if scope == "out_of_scope" and sources:
+        return False, "out_of_scope nhưng vẫn cite source"
+    return True, None
+
+
+def check_followup_contract(rec):
+    """Contract yêu cầu đúng ba câu hỏi follow-up không rỗng."""
+    out = rec.get("output") or {}
+    if out.get("_parse_error"):
+        return None, "bỏ qua (JSON vỡ)"
+    questions = out.get("followup_questions")
+    if not isinstance(questions, list) or len(questions) != 3:
+        return False, "followup_questions phải là list đúng 3 phần tử"
+    if any(not isinstance(q, str) or not q.strip() for q in questions):
+        return False, "followup_questions chứa câu không hợp lệ/rỗng"
+    return True, None
+
+
 CHECKS = [  # thêm check của nhóm vào đây
     ("schema_valid", check_schema),
     ("citation_exists", check_citation_exists),
     ("quote_verbatim", check_quote_verbatim),
+    ("scope_sources_contract", check_scope_sources_contract),
+    ("followup_contract", check_followup_contract),
 ]
 
 
@@ -90,8 +121,10 @@ def main(path="results.jsonl"):
                 ok, reason = fn(rec)
             elif fn is check_citation_exists:
                 ok, reason = fn(rec, valid_ids)
-            else:
+            elif fn is check_quote_verbatim:
                 ok, reason = fn(rec, section_tokens)
+            else:
+                ok, reason = fn(rec)
             if ok is None:
                 line.append(f"{name}: skip")
                 continue

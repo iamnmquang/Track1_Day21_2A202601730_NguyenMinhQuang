@@ -1,0 +1,15 @@
+.env
+__pycache__/
+*.pyc
+# artifacts chạy sinh ra — sinh viên tự tạo khi chạy (ở root repo)
+dataset.jsonl
+results.jsonl
+verdicts.jsonl
+labels.csv
+labels-*.csv
+report.html
+
+# Nhãn vàng là evidence phải lưu trong repo, không phải artifact tạm ở root.
+!deliverables/
+!deliverables/evidence/
+!deliverables/evidence/labels.csv
